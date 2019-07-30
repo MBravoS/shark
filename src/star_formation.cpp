@@ -482,7 +482,7 @@ double StarFormation::kd12_taudep(double sigma_gas, void * params) const{
 	b = parameters.gas_velocity_dispersion / (constants::G * sigma_gas);
 	t_t = std::pow(a, 0.5) * b;
 
-	t_ff = t_gmc
+	t_ff = t_gmc;
 	if(t_ff > t_t){
 		t_ff = t_t;
 	}
