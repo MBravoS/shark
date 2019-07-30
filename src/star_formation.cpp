@@ -466,28 +466,25 @@ double StarFormation::kd12_taudep(double sigma_gas, void * params) const{
 	auto props = static_cast<galaxy_properties_for_integration *>(params);
 
 	// in Gyr
-	double tdep = 3.5 * props->torb / parameters.efficiency_sf;
+	double t_ff = 0;
+	double sigma_gmc = 85*1e12; //in Msun/Mpc^2
+	double a = 0;
+	double b = 0;
 
-	double sigma_gmc = parameters.gmc_surface_density; 
-	if(sigma_gmc < sigma_gas){
-		sigma_gmc= sigma_gas;
+	// GMC regime
+	if(sigma_gas<36.56e12){
+		a = parameters.gas_velocity_dispersion / constants::G;
+		b = 64 * sigma_gas * std::pow(sigma_gmc, 3);
+		t_ff = a * std::pow(constants::PI / b, 0.25);
+	}
+	// Toomre regime
+	else{
+		a = 1.0 / 16;
+		b = parameters.gas_velocity_dispersion / (constants::G * sigma_gas);
+		t_ff = std::pow(a, 0.5) * b;
 	}
 
-	// in Gyr
-	double tgmc = 1.9 / parameters.efficiency_sf * (parameters.gas_velocity_dispersion / 10.0)
-			* std::pow(sigma_gmc/1e14, -0.75) * std::pow(sigma_gas/1e13, -0.25);
-
-	double t = tdep;
-	if(t > tgmc){
-		t = tgmc;
-	}
-
-	//Put an upper limit to something similar to the numbers observed in the outkirts of spirals
-	if(t > 100){
-		t=100;
-	}
-
-	return t;
+	return t_ff/(parameters.efficiency_sf/100);
 }
 
 
