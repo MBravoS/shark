@@ -467,7 +467,7 @@ double StarFormation::kd12_taudep(double sigma_gas, void * params) const{
 
 	// in Gyr
 	double t_ff = 0;
-	double sigma_gmc = 85*1e12; //in Msun/Mpc^2
+	double sigma_gmc = parameters.gmc_surface_density; //in Msun/Mpc^2
 	double a = 0;
 	double b = 0;
 
