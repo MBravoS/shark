@@ -467,21 +467,24 @@ double StarFormation::kd12_taudep(double sigma_gas, void * params) const{
 
 	// in Gyr
 	double t_ff = 0;
+	double t_gmc = 0;
+	double t_t = 0;
 	double sigma_gmc = parameters.gmc_surface_density; //in Msun/Mpc^2
 	double a = 0;
 	double b = 0;
 
 	// GMC regime
-	if(sigma_gas<36.56e12){
-		a = parameters.gas_velocity_dispersion / constants::G;
-		b = 64 * sigma_gas * std::pow(sigma_gmc, 3);
-		t_ff = a * std::pow(constants::PI / b, 0.25);
-	}
-	// Toomre regime
-	else{
-		a = 1.0 / 16;
-		b = parameters.gas_velocity_dispersion / (constants::G * sigma_gas);
-		t_ff = std::pow(a, 0.5) * b;
+	a = parameters.gas_velocity_dispersion / constants::G;
+	b = 64 * sigma_gas * std::pow(sigma_gmc, 3);
+	t_gmc = a * std::pow(constants::PI / b, 0.25);
+	// Toomre regime{
+	a = 1.0 / 16;
+	b = parameters.gas_velocity_dispersion / (constants::G * sigma_gas);
+	t_t = std::pow(a, 0.5) * b;
+
+	t_ff = t_gmc
+	if(t_ff > t_t){
+		t_ff = t_t;
 	}
 
 	return t_ff/(parameters.efficiency_sf/100);
