@@ -479,7 +479,13 @@ double StarFormation::kd12_taudep(double sigma_gas, void * params) const{
 		t_ff = (parameters.gas_velocity_dispersion / constants::G) * std::pow(constants::PI / (64 * sigma_gas * std::pow(sigma_gmc, 3)),0.25);
 	}
 
-	return t_ff/(parameters.efficiency_sf/100);
+	// conversion to H2 depletion timescale and check if exceedes 100 Gyr
+	t_ff = t_ff/(parameters.efficiency_sf/100);
+	if(t_ff > 100){
+		t_ff=100;
+	}
+
+	return t_ff;
 }
 
 double StarFormation::molecular_hydrogen(double mcold, double mstar, double rgas, double rstar, double zgas, double z,
