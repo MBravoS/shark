@@ -62,7 +62,7 @@ StarFormationParameters::StarFormationParameters(const Options &options)
 
 	// Convert surface density to internal code units.
 	sigma_HI_crit = sigma_HI_crit * std::pow(constants::MEGA,2.0);
-        gmc_surface_density = gmc_surface_density * std::pow(constants::MEGA,2.0);
+	gmc_surface_density = gmc_surface_density * std::pow(constants::MEGA,2.0);
 
 	// Define critical density for the normal to starburst SF transition for the KMT09 model in Msun/Mpc^2.
 	sigma_crit_KMT09 = 85.0 * std::pow(constants::MEGA , 2.0);
@@ -467,30 +467,20 @@ double StarFormation::kd12_taudep(double sigma_gas, void * params) const{
 
 	// in Gyr
 	double t_ff = 0;
-	double t_gmc = 0;
-	double t_t = 0;
 	double sigma_gmc = parameters.gmc_surface_density; //in Msun/Mpc^2
-	double a = 0;
-	double b = 0;
-
-	// GMC regime
-	a = parameters.gas_velocity_dispersion / constants::G;
-	b = 64 * sigma_gas * std::pow(sigma_gmc, 3);
-	t_gmc = a * std::pow(constants::PI / b, 0.25);
-	// Toomre regime{
-	a = 1.0 / 16;
-	b = parameters.gas_velocity_dispersion / (constants::G * sigma_gas);
-	t_t = std::pow(a, 0.5) * b;
-
-	t_ff = t_gmc;
-	if(t_ff > t_t){
-		t_ff = t_t;
+	double sigma_trans = 36.5608 * std::pow(constants::MEGA,2);
+	
+	if(sigma_gas > sigma_trans){
+		// Toomre regime
+		t_ff = std::pow(1.0 / 16,0.5) * (parameters.gas_velocity_dispersion / (constants::G * sigma_gas));
+	}
+	else{
+		// GMC regime
+		t_ff = (parameters.gas_velocity_dispersion / constants::G) * std::pow(constants::PI / (64 * sigma_gas * std::pow(sigma_gmc, 3)),0.25);
 	}
 
 	return t_ff/(parameters.efficiency_sf/100);
 }
-
-
 
 double StarFormation::molecular_hydrogen(double mcold, double mstar, double rgas, double rstar, double zgas, double z,
 		double &jmol, double jgas, double vgal, bool bulge, bool jcalc) {
