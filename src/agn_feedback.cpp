@@ -193,12 +193,13 @@ double AGNFeedback::agn_bolometric_luminosity(double macc, double mBH){
 	return Lbol;
 }
 
-double AGNFeedback::agn_mechanical_luminosity(double macc, double mBH){
+double AGNFeedback::agn_mechanical_luminosity(double macc_hh, double macc_sb, double mBH){
 	
 	//return mechanical luminosity in units of 10^40 erg/s.
 	using namespace constants;
 	
-	double m_dot = accretion_rate_ratio(macc,mBH) * 100.0;
+	double m_dot_hh = accretion_rate_ratio(macc_hh, mBH) * 100.0;
+	double m_dot = accretion_rate_ratio(macc_hh + macc_sb, mBH) * 100.0;
 	double Lmech = 0;
 
 	// testing a dependence of the spin on the BH mass from Volonteri+2007.
@@ -206,10 +207,10 @@ double AGNFeedback::agn_mechanical_luminosity(double macc, double mBH){
 	double spin = 0.67;
 
 	if(parameters.spin_v07){
-		spin =   0.305 * logmbh - 1.7475; //0.05*std::pow(logmbh, 2.0) -0.38*logmbh + 0.5475;
+		spin = 0.305 * logmbh - 1.7475; //0.05*std::pow(logmbh, 2.0) -0.38*logmbh + 0.5475;
 	}
 
-        if(spin < 0){
+	if(spin < 0){
 		spin =0;
 	}
 	else if(spin > 1){
@@ -217,10 +218,10 @@ double AGNFeedback::agn_mechanical_luminosity(double macc, double mBH){
 	}
 
 	if(m_dot >= 1.0){
-		Lmech = 2.5e3 * std::pow(mBH/1e9,1.1) * std::pow(m_dot,1.2) * std::pow(spin,2);
+		Lmech = 2.5e3 * std::pow(mBH/1e9,1.1) * std::pow(m_dot_hh,1.2) * std::pow(spin,2);
 	}
 	else{
-		Lmech = 2e5 * (mBH/1e9) * m_dot  * std::pow(spin,2);
+		Lmech = 2e5 * (mBH/1e9) * m_dot_hh  * std::pow(spin,2);
 	}
 
 	return Lmech;
