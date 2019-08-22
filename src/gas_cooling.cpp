@@ -94,6 +94,7 @@ GasCoolingParameters::GasCoolingParameters(const Options &options)
 	options.load("gas_cooling.pre_enrich_z", pre_enrich_z);
 	options.load("gas_cooling.tau_cooling", tau_cooling);
 	options.load("gas_cooling.min_z_cooling", min_z_cooling);
+	options.load("gas_cooling.jet_coupling_halo_mass", halo_jet_lim);
 
 	auto cooling_tables_dir = get_static_data_filepath("cooling");
 	tables_idx metallicity_tables = find_tables(cooling_tables_dir);
@@ -472,7 +473,7 @@ double GasCooling::cooling_rate(Subhalo &subhalo, Galaxy &galaxy, double z, doub
 
 		//Mass heating rate from AGN in units of Msun/Gyr.
 		double mheatrate = 0;
-		if(agnfeedback->parameters.model == AGNFeedbackParameters::BRAVO19 && halo->Mvir > std::pow(10,11.6)){
+		if(agnfeedback->parameters.model == AGNFeedbackParameters::BRAVO19 && halo->Mvir > std::pow(10,halo_jet_lim)){
 			mheatrate = agnfeedback->agn_mechanical_luminosity(central_galaxy->smbh.macc_hh+central_galaxy->smbh.macc_sb,central_galaxy->smbh.mass) * agnfeedback->parameters.kappa_radio * 1e40 / (0.5*std::pow(vvir*KM2CM,2.0)) * MACCRETION_cgs_simu;
 		}
 		else if(agnfeedback->parameters.model == AGNFeedbackParameters::CROTON16){
