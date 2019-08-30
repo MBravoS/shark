@@ -99,10 +99,10 @@ def prepare_data(hdf5_data,index,model_dir,snapshot,subvol):
 	macc_hh=macc_hh/macc
 	
 	if jet_all:
-		lbh,lmech,maccr,Lhx,Lsx,Mb=[np.zeros(len(macc))]*6
+		lbh,lmech,maccr,Lhx,Lsx,Mb=[np.zeros(len(mass_sel))]*6
 		lbh[mass_sel],lmech[mass_sel],maccr[mass_sel],Lhx[mass_sel],Lsx[mass_sel],Mb[mass_sel]=LBH(h0,mbh,macc,macc_hh,jet_all)
 	else:
-		lbh,lmech,maccr,maccr_hh,Lhx,Lsx,Mb=[np.zeros(len(macc))]*7
+		lbh,lmech,maccr,maccr_hh,Lhx,Lsx,Mb=[np.zeros(len(mass_sel))]*7
 		lbh[mass_sel],lmech[mass_sel],maccr[mass_sel],maccr_hh[mass_sel],Lhx[mass_sel],Lsx[mass_sel],Mb[mass_sel]=LBH(h0,mbh,macc,macc_hh,jet_all)
 	
 	# Writing of the hdf5 files with the relevant AGN quantities
