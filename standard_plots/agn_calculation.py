@@ -118,7 +118,7 @@ def prepare_data(hdf5_data,index,model_dir,snapshot,subvol):
 	hf.create_dataset('galaxies/lqso_mb',data=Mb)
 	if not jet_all:
 		hf.create_dataset('galaxies/bh_accretion_ratio_hh',data=maccr_hh)
-	hf.create_dataset('galaxies/id_galaxy',data=idgal)
+	hf.create_dataset('galaxies/id_galaxy',data=id_gal)
 	hf.close()
 
 def main(model_dir,output_dir,redshift_table,subvols,obs_dir):
