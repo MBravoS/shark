@@ -47,7 +47,7 @@ jet_all=True
 # Define the minimum BH mass to calculate AGN properties
 mbh_low=0
 
-def LBH(mass,acc,f_hot,jet_all):
+def LBH(h_sim,mass,acc,f_hot,jet_all):
 	mass/=h_sim
 	acc/=h_sim
 	scale=np.log10(4.0*np.pi)+np.log10(c_light)+np.log10(G)+np.log10(M_sun)+np.log10(M_atom)+np.log10(H_atom_mass)-np.log10(sigma_Thomson)
@@ -89,7 +89,7 @@ def LBH(mass,acc,f_hot,jet_all):
 
 def prepare_data(hdf5_data,index,model_dir,snapshot,subvol):
 	# Unpack data
-	(h_sim,_,id_gal,macc_hh,macc_sb,mbh)=hdf5_data
+	(h0,_,id_gal,macc_hh,macc_sb,mbh)=hdf5_data
 	
 	# Calculation of the relevant AGN quantities
 	macc=macc_hh+macc_sb
@@ -100,10 +100,10 @@ def prepare_data(hdf5_data,index,model_dir,snapshot,subvol):
 	
 	if jet_all:
 		lbh,lmech,maccr,Lhx,Lsx,Mb=[np.zeros(len(macc))]*6
-		lbh[mass_sel],lmech[mass_sel],maccr[mass_sel],Lhx[mass_sel],Lsx[mass_sel],Mb[mass_sel]=LBH(mbh,macc,macc_hh,jet_all)
+		lbh[mass_sel],lmech[mass_sel],maccr[mass_sel],Lhx[mass_sel],Lsx[mass_sel],Mb[mass_sel]=LBH(h0,mbh,macc,macc_hh,jet_all)
 	else:
 		lbh,lmech,maccr,maccr_hh,Lhx,Lsx,Mb=[np.zeros(len(macc))]*7
-		lbh[mass_sel],lmech[mass_sel],maccr[mass_sel],maccr_hh[mass_sel],Lhx[mass_sel],Lsx[mass_sel],Mb[mass_sel]=LBH(mbh,macc,macc_hh,jet_all)
+		lbh[mass_sel],lmech[mass_sel],maccr[mass_sel],maccr_hh[mass_sel],Lhx[mass_sel],Lsx[mass_sel],Mb[mass_sel]=LBH(h0,mbh,macc,macc_hh,jet_all)
 	
 	# Writing of the hdf5 files with the relevant AGN quantities
 	file_to_write=os.path.join(model_dir,str(snapshot),str(subvol),'AGN.hdf5')
