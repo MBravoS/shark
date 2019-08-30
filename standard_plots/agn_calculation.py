@@ -44,6 +44,8 @@ Lsun=3.839e33
 
 # Choose if jets are powered only by hot gas accretion or by all accretion
 jet_all=True
+# Define the minimum BH mass to calculate AGN properties
+mbh_low=0
 
 def LBH(mass,acc,f_hot,jet_all):
 	mass/=h_sim
