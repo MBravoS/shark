@@ -86,8 +86,6 @@ def LBH(mass,acc,f_hot,jet_all):
 
 
 def prepare_data(hdf5_data,index,model_dir,snapshot,subvol):
-	bin_it=functools.partial(us.wmedians,xbins=xmf)
-	
 	# Unpack data
 	(h_sim,_,id_gal,macc_hh,macc_sb,mbh)=hdf5_data
 	
