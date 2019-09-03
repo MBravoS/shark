@@ -107,7 +107,7 @@ def prepare_data(hdf5_data,index,model_dir,snapshot,subvol):
 	
 	# Writing of the hdf5 files with the relevant AGN quantities
 	file_to_write=os.path.join(model_dir,str(snapshot),str(subvol),'AGN.hdf5')
-	print('Will write extinction to %s' % file_to_write)
+	print('Will write AGN to %s' % file_to_write)
 	hf=h5py.File(file_to_write,'w')
 	
 	hf.create_dataset('galaxies/lqso',data=lbh)

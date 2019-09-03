@@ -568,7 +568,15 @@ double GasCooling::cooling_rate(Subhalo &subhalo, Galaxy &galaxy, double z, doub
 	// check for undefined values.
 	if(subhalo.cold_halo_gas.mass < 0 || subhalo.cold_halo_gas.mass >1e17 || std::isnan(subhalo.cold_halo_gas.mass)){
 		std::ostringstream os;
-		os << halo << " has cold halo gas mass not well defined";
+		if(subhalo.cold_halo_gas.mass < 0){
+			os << halo << " has negative cold halo gas mass";
+		}
+		if(subhalo.cold_halo_gas.mass >1e17){
+			os << halo << " has cold halo gas mass above threshold";
+		}
+		if(std::isnan(subhalo.cold_halo_gas.mass)){
+			os << halo << " has cold halo gas mass not well defined";
+		}
 		throw invalid_data(os.str());
 	}
 
