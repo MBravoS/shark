@@ -20,6 +20,7 @@
 import functools
 
 import numpy as np
+import h5py
 
 import common
 import utilities_statistics as us
@@ -33,7 +34,7 @@ mbins = np.arange(mlow, mupp, dm)
 xmf = mbins + dm/2.0
 
 rlow = 0.0
-rupp = 5.0
+rupp = 7.0
 dr = 0.5
 rbins = np.arange(rlow, rupp, dr)
 xrf = rbins + dr/2.0
@@ -92,7 +93,7 @@ def prepare_data(hdf5_data, fradii, index):
         for i in range(0, len(xmf)):
             ind   = np.where((np.log10(mstar_tot) >= xmf[i] - dm/2.0) 
                     & (np.log10(mstar_tot) < xmf[i] +  dm/2.0) 
-                    & (d_all < 5.5))
+                    & (d_all < 7.5))
             #print 'number of neighbours', len(sfr_tot[ind])
             mstars_galsin   = np.log10(mstar_tot[ind])
             sfr_tot_galsin  = sfr_tot[ind]
@@ -127,18 +128,31 @@ def plot_fractions_radii(plt, output_dir, fradii):
     plt.subplots_adjust(bottom=0.15, left=0.15)
     subplots = (321, 322, 323, 324, 325, 326)
     zs = (0, 0.3, 0.5)
-    cols = ('r','g','b')
-    lines = ('dotted', 'dashed', 'solid')
-    xmin, xmax, ymin, ymax = 0, 5, -0.05, 1.05
+    cols = ('r','yellowgreen','darkblue')
+    colse = ('Crimson','Green','blue')
+    xmin, xmax, ymin, ymax = 0, 7, -0.05, 1.05
 
-    xleg = xmax - 0.3 * (xmax - xmin)
-    yleg = ymin + 0.1 * (ymax - ymin)
+    xleg = xmin + 0.05 * (xmax - xmin)
+    yleg = ymax - 0.1 * (ymax - ymin)
 
     xtitle = '$\\rm d_{\\rm proj}/cMpc$'
     ytitle = '$\\rm fraction$'
 
     labels = ('Main sequence', 'Gas rich')
     labelsz = ('z=0', 'z=0.3', 'z=0.5')
+
+    #read C-EAGLE data
+    #ceagledata = h5py.File('../../BuffaloFigure_C-EAGLE_Jul19_longMS.hdf5','r')
+    ceagledatasf = h5py.File('../../BuffaloFigure_C-EAGLE_30Jul19_longMS_ssfr_Hydrangea.hdf5', 'r')
+    a_group_key = list(ceagledatasf.keys())[1]
+    print a_group_key
+    # Get the data
+    databahesf = list(ceagledatasf[a_group_key])
+    ceagledatagas = h5py.File('../../BuffaloFigure_C-EAGLE_30Jul19_longMS_hn_Hydrangea.hdf5', 'r')
+    a_group_key = list(ceagledatagas.keys())[1]
+    # Get the data
+    databahegas = list(ceagledatagas[a_group_key])
+
 
     p = 0
     for i in range(0, len(xmf)-1):
@@ -157,25 +171,45 @@ def plot_fractions_radii(plt, output_dir, fradii):
                 ytit = ''
             common.prepare_ax(ax, xmin, xmax, ymin, ymax, xtit, ytit, locators=(1, 1, 1))
             ax.text(xleg, yleg, '$M_{\\star}$=%s' % str(xmf[i]))
-        
+
+            if(j == 0):
+               for z in range(0,3):
+                       x = databahesf[i][z][0]
+                       y = databahesf[i][z][1]
+                       yerrdn = databahesf[i][z][2]
+                       yerrup = databahesf[i][z][3]
+                       ind = np.where(y >= 0)
+                       ax.fill_between(x[ind],yerrdn[ind],yerrup[ind], facecolor=colse[z], alpha=0.2,interpolate=True)
+                       ax.plot(x[ind],y[ind],linewidth=2, linestyle='dashed', color=colse[z])
+
+            if(j == 1):
+               for z in range(0,3):
+                       x = databahegas[i][z][0]
+                       y = databahegas[i][z][1]
+                       yerrdn = databahegas[i][z][2]
+                       yerrup = databahegas[i][z][3]
+                       ind = np.where(y >= 0)
+                       ax.fill_between(x[ind],yerrdn[ind],yerrup[ind], facecolor=colse[z], alpha=0.2,interpolate=True)
+                       ax.plot(x[ind],y[ind],linewidth=2, linestyle='dashed', color=colse[z])
+          
             #predicted fraction
             for z in range (0,3):
-                ind = np.where(fradii[j,0,z,i,:] > 0)
+                ind   = np.where(fradii[j,0,z,i,:] > 0)
                 xplot = xrf[ind]
                 yplot = fradii[j,0,z,i,ind]
                 err   = fradii[j,1,z,i,ind]
-                if(p == 0):
-                   ax.plot(xplot, yplot[0], color=cols[z], linestyle=lines[z], label=labelsz[z])
+                if(p == 2):
+                   ax.plot(xplot, yplot[0], color=cols[z], linestyle='solid', label=labelsz[z], linewidth=2)
                 else:
-                   ax.plot(xplot, yplot[0], color=cols[z], linestyle=lines[z])
-                ax.fill_between(xplot,yplot[0],yplot[0]-err[0], facecolor=cols[z], alpha=0.5,interpolate=True)
-                ax.fill_between(xplot,yplot[0],yplot[0]+err[0], facecolor=cols[z], alpha=0.5,interpolate=True)
+                   ax.plot(xplot, yplot[0], color=cols[z], linestyle='solid', linewidth=2)
+                ax.fill_between(xplot,yplot[0],yplot[0]-err[0], facecolor=cols[z], alpha=0.2,interpolate=True)
+                ax.fill_between(xplot,yplot[0],yplot[0]+err[0], facecolor=cols[z], alpha=0.2,interpolate=True)
+                if(p == 2):
+                   ax.legend(['z=0','z=0.3','z=0.5'],loc='lower right',fontsize='small')
 
-            if(p == 0):
-               ax.legend(['z=0','z=0.3','z=0.5'],loc='lower center',fontsize='small')
             p = p + 1
 
-            
+           
     common.savefig(output_dir, fig, "cluster_fractions.pdf")
 
 def plot_individual_clusters(plt, output_dir, nradii_z0, nradii_z0p3, nradii_z0p5):
