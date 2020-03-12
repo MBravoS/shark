@@ -57,6 +57,7 @@ public:
 	double epsilon_qso = 0;
 	double eta_superedd = 4;
 	double hot_halo_threshold = 0;
+	bool agn_reheat_memory = true;
 
 	enum AGNFeedbackModel {
 		CROTON16 = 0,

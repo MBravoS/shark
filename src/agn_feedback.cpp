@@ -51,15 +51,18 @@ AGNFeedbackParameters::AGNFeedbackParameters(const Options &options)
 	options.load("agn_feedback.tau_fold", tau_fold);
 
 	// relevant for Croton16 and Bravo 19 models.
-	options.load("agn_feedback.kappa_agn", kappa_agn);
 	options.load("agn_feedback.accretion_eff_cooling", nu_smbh);
+	options.load("agn_feedback.agn_reheat_memory", agn_reheat_memory);
 
-	// relevant for Bravo 19 model.
+	// relevant for Croton16 model.
+	options.load("agn_feedback.kappa_agn", kappa_agn);
+
+	// relevant for Bravo 19 model (radio-mode).
 	options.load("agn_feedback.kappa_radio", kappa_radio);
 	options.load("agn_feedback.spin_v07", spin_v07);
 	options.load("agn_feedback.hot_halo_threshold", hot_halo_threshold);
 
-	// control QSO feedback - relevant for Bravo 19 model.
+	// relevant for Bravo 19 model (QSO-mode).
 	options.load("agn_feedback.qso_feedback", qso_feedback);
 	options.load("agn_feedback.epsilon_qso", epsilon_qso);
 	options.load("agn_feedback.eta_superedd", eta_superedd);

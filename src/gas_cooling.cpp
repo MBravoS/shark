@@ -486,7 +486,7 @@ double GasCooling::cooling_rate(Subhalo &subhalo, Galaxy &galaxy, double z, doub
 		double rheat = mheatrate/coolingrate * r_cool;
 
 		double r_ratio = rheat/r_cool;
-		if(agnfeedback->parameters.model == AGNFeedbackParameters::CROTON16){
+		if(agnfeedback->parameters.agn_reheat_memory && (agnfeedback->parameters.model == AGNFeedbackParameters::CROTON16 || agnfeedback->parameters.model == AGNFeedbackParameters::BRAVO19)){
 			if(subhalo.cooling_subhalo_tracking.rheat < rheat){
 				subhalo.cooling_subhalo_tracking.rheat = rheat;
 			}
