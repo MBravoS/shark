@@ -28,6 +28,7 @@
 #include <numeric>
 #include <vector>
 
+#include "components/algorithms.h"
 #include "cosmology.h"
 #include "exceptions.h"
 #include "halo.h"
@@ -58,7 +59,7 @@ ExecutionParameters &TreeBuilder::get_exec_params()
 
 void TreeBuilder::ensure_trees_are_self_contained(const std::vector<MergerTreePtr> &trees) const
 {
-	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, int thread_idx) {
+	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, unsigned int thread_idx) {
 		for (auto &halo: tree->halos) {
 			if (halo->merger_tree != tree) {
 				std::ostringstream os;
@@ -71,7 +72,7 @@ void TreeBuilder::ensure_trees_are_self_contained(const std::vector<MergerTreePt
 
 void TreeBuilder::ignore_late_massive_halos(std::vector<MergerTreePtr> &trees, SimulationParameters sim_params, ExecutionParameters exec_params) 
 {
-	omp_static_for(trees, threads, [&](MergerTreePtr &tree, int thread_idx) {
+	omp_static_for(trees, threads, [&](MergerTreePtr &tree, unsigned int thread_idx) {
 		for (auto &root: tree->roots()) {
 			if(root->Mvir > exec_params.ignore_npart_threshold * sim_params.particle_mass && sim_params.redshifts[root->snapshot] < exec_params.ignore_below_z){
 				root->ignore_gal_formation = true;
@@ -127,7 +128,7 @@ std::vector<MergerTreePtr> TreeBuilder::build_trees(std::vector<HaloPtr> &halos,
 	loop_through_halos(halos);
 	{
 		Timer t;
-		omp_static_for(trees, threads, [](MergerTreePtr &tree, int thread_idx) {
+		omp_static_for(trees, threads, [](MergerTreePtr &tree, unsigned int thread_idx) {
 			tree->consolidate();
 		});
 		LOG(info) << "Took " << t << " to consolidate all trees";
@@ -218,7 +219,7 @@ void TreeBuilder::define_central_subhalos(const std::vector<MergerTreePtr> &tree
 	//This function loops over merger trees and halos to define central galaxies in a self-consistent way. The loop starts at z=0.
 
 	//Loop over trees.
-	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, int thread_idx) {
+	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, unsigned int thread_idx) {
 		for (int snapshot=sim_params.max_snapshot; snapshot >= sim_params.min_snapshot; snapshot--) {
 
 			for (auto &halo: tree->halos_at(snapshot)) {
@@ -291,7 +292,7 @@ void TreeBuilder::define_central_subhalos(const std::vector<MergerTreePtr> &tree
 	});
 
 	// Make sure each halo has only one central subhalo and that the rest are satellites.
-	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, int thread_idx) {
+	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, unsigned int thread_idx) {
 		for (int snapshot=sim_params.min_snapshot; snapshot >= sim_params.max_snapshot; snapshot++) {
 
 			for (auto &halo: tree->halos_at(snapshot)) {
@@ -319,7 +320,7 @@ void TreeBuilder::define_central_subhalos(const std::vector<MergerTreePtr> &tree
 void TreeBuilder::ensure_halo_mass_growth(const std::vector<MergerTreePtr> &trees, SimulationParameters &sim_params){
 
 	//This function loops over merger trees and halos to make sure that descendant halos are at least as massive as their progenitors.
-	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, int thread_idx) {
+	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, unsigned int thread_idx) {
 		for(int snapshot=sim_params.min_snapshot; snapshot < sim_params.max_snapshot; snapshot++) {
 
 			for(auto &halo: tree->halos_at(snapshot)){
@@ -338,7 +339,7 @@ void TreeBuilder::spin_interpolated_halos(const std::vector<MergerTreePtr> &tree
 	// This has to be done starting from the first snapshot forward so that the angular momentum and concentration are propagated correctly if subhalo is interpolated over many snapshots.
 
 	//Loop over trees.
-	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, int thread_idx) {
+	omp_static_for(trees, threads, [&](const MergerTreePtr &tree, unsigned int thread_idx) {
 		for (int snapshot=sim_params.max_snapshot; snapshot >=sim_params.min_snapshot; snapshot--) {
 
 			for (auto &halo: tree->halos_at(snapshot)) {
@@ -437,7 +438,7 @@ void TreeBuilder::define_ages_halos(const std::vector<MergerTreePtr> &trees, Sim
 						auto snap = snapshot - 1;
 
 						while(main_prog && subhalo->infall_t == 0){
-							if(main_prog->subhalo_type == Subhalo::CENTRAL){
+							if(main_prog->subhalo_type == Subhalo::CENTRAL && subhalo->Mvir_infall == 0){
 								subhalo->infall_t = sim_params.redshifts[snap];
 								subhalo->Mvir_infall = main_prog->Mvir;
 							}
@@ -527,13 +528,6 @@ SubhaloPtr HaloBasedTreeBuilder::find_descendant_subhalo(
 	return descendant_subhalo;
 }
 
-static void sort_by_id(std::vector<HaloPtr> &halos)
-{
-	std::sort(halos.begin(), halos.end(), [](const HaloPtr &x, const HaloPtr &y) {
-		return x->id < y->id;
-	});
-}
-
 static std::vector<HaloPtr>::iterator find_by_id(std::vector<HaloPtr> &halos, Halo::id_t id)
 {
 	auto lo = std::lower_bound(halos.begin(), halos.end(), id, [](const HaloPtr &x, Halo::id_t id)
@@ -552,7 +546,6 @@ static std::vector<HaloPtr>::iterator find_by_id(std::vector<HaloPtr> &halos, Ha
 
 void HaloBasedTreeBuilder::loop_through_halos(std::vector<HaloPtr> &halos)
 {
-
 	sort_by_id(halos);
 
 	// To find subhalos/halos that correspond to each other, we do the following
