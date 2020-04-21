@@ -65,6 +65,7 @@
 * ``mstellar_halo``: stellar mass in the halo built by tidal stripping [Msun/h]
 * ``mstellar_halo_metals``: mass of metals locked up in the stellar halo built by tidal stripping [Msun/h]
 * ``mvir_hosthalo``: Dark matter mass of the host halo in which this galaxy resides [Msun/h]
+* ``mvir_infall_subhalo``: Dark matter mass at infall of the host halo in which this galaxy reside when it was last central [Msun/h]
 * ``mvir_subhalo``: Dark matter mass of the subhalo in which this galaxy resides [Msun/h]. In the case of type 2 satellites, this corresponds to the mass its subhalo had before disappearing from the subhalo catalogs.
 * ``position_x``: position component x of galaxy [cMpc/h]. In the case of type 2 galaxies, the positions are generated to randomly sample an NFW halo with the concentration of the halo the galaxy lives in.
 * ``position_y``: position component y of galaxy [cMpc/h]. In the case of type 2 galaxies, the positions are generated to randomly sample an NFW halo with the concentration of the halo the galaxy lives in.
@@ -139,7 +140,7 @@
 ``run_info``
 ^^^^^^^^^^^^
 * ``batches``: number of batches analysed
-* ``effective_volume``: effective volume of this run [cMpc/h]
+* ``effective_volume``: effective volume of this run [(cMpc/h)^3]
 * ``lbox``: Box side size of the full simulated volume [Mpc/h]
 * ``ode_solver_precision``: accuracy applied when solving the ODE system of the physical model.
 * ``particle_mass``: dark matter particle mass of this simulation [Msun/h]
