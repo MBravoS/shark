@@ -209,6 +209,9 @@ def plot_stellarmf_z(plt, outdir, obsdir, h0, plotz, hist_smf, hist_smf_cen, his
             y = hist_smf[idx,:]
             ind = np.where(y < 0.)
             ax.plot(xmf[ind],y[ind],'r', label='all galaxies' if idx == 0 else None)
+            print('#redshift', z)
+            for a,b in zip(xmf[ind],y[ind]):
+                print(a,b)
             y = hist_smf_cen[idx,:]
             ind = np.where(y < 0.)
             ax.plot(xmf[ind],y[ind],'b', linestyle='dotted', label ='centrals' if idx == 0 else None)
@@ -433,12 +436,16 @@ def plot_HImf_z0(plt, outdir, obsdir, h0, plotz_HImf, hist_HImf, hist_HImf_cen, 
         y = hist_HImf[0,:]
         ind = np.where(y < 0.)
         ax.plot(xmf[ind],y[ind],'k',  label ='all galaxies')
+        print("Will print the HI MF")
+        for a,b in zip(xmf[ind],y[ind]):
+            print(a,b)
         y = hist_HImf_cen[0,:]
         ind = np.where(y < 0.)
         ax.plot(xmf[ind],y[ind],'b', linestyle='dotted', label ='centrals')
         y = hist_HImf_sat[0,:]
         ind = np.where(y < 0.)
         ax.plot(xmf[ind],y[ind],'r', linestyle='dashed', label ='satellites')
+
 
     pHI_GD14 = common.load_observation(obsdir, 'Models/SharkVariations/HIH2MassFunctions_OtherModels.dat', [0])
 
@@ -572,6 +579,10 @@ def plot_H2mf_z0(plt, outdir, obsdir, h0, plotz_HImf, hist_H2mf, hist_H2mf_cen, 
         y = hist_H2mf[0,:]
         ind = np.where(y < 0.)
         ax.plot(xmf[ind],y[ind],'k')
+        print("Will print the H2 MF")
+        for a,b in zip(xmf[ind],y[ind]):
+            print(a,b)
+
         y = hist_H2mf_cen[0,:]
         ind = np.where(y < 0.)
         ax.plot(xmf[ind],y[ind],'b', linestyle='dotted')
@@ -1200,10 +1211,12 @@ def prepare_data(hdf5_data, index, hist_smf, hist_smf_offset, hist_smf_cen, hist
     (h0, volh, sfr_disk, sfr_burst, mdisk, mbulge, rstar_disk, mBH, mHI, mH2, 
      mgas_disk, mHI_bulge, mH2_bulge, mgas_bulge, mgas_metals_disk, mgas_metals_bulge, 
      mstars_metals_disk, mstars_metals_bulge, typeg, mvir_hosthalo, rstar_bulge, 
-     mbulge_mergers, mbulge_diskins) = hdf5_data
+     mbulge_mergers, mbulge_diskins, mbulge_mergers_assembly, mbulge_diskins_assembly) = hdf5_data
 
+    zstar = (mstars_metals_disk + mstars_metals_bulge) / (mdisk + mbulge)
+    rcomb = (rstar_disk * mdisk + rstar_bulge * mbulge) / (mdisk + mbulge) / h0 * 1e3
     mgas = mgas_disk+mgas_bulge
-    mgas_metals = mgas_metals_disk+mgas_metals_bulge
+    mgas_metals = mgas_metals_disk + mgas_metals_bulge
 
     mass          = np.zeros(shape = len(mdisk))
     mass_30kpc    = np.zeros(shape = len(mdisk))
@@ -1217,15 +1230,20 @@ def prepare_data(hdf5_data, index, hist_smf, hist_smf_offset, hist_smf_cen, hist
     mass_mol_cen = np.zeros(shape = len(mdisk))
     mass_mol_sat = np.zeros(shape = len(mdisk))
 
-    #if (index == 0):
-    #    ind = np.where((mdisk+mbulge)/h0 > 1e8)
-    #    for a,b,c,d,e,f,g,h in zip(sfr_disk[ind]/h0/1e9, sfr_burst[ind]/h0/1e9, mdisk[ind]/h0, mbulge[ind]/h0, mHI[ind]/h0*XH, mH2[ind]/h0*XH, mHI_bulge[ind]/h0*XH, mH2_bulge[ind]/h0*XH):
-    #        print (a,b,c,d,e,f,g,h)
+    if (index == 0):
+        #ind = np.where((mdisk+mbulge)/h0 > 1e8)
+        #print('#sfr_disk sfr_bulge mdisk mbulge mHI_disk mH2_disk mHI_bulge mH2_bulge mburst_mergers mburst_diskins mbulge_mergers_assembly mbulge_diskins_assembly')
+        #for a,b,c,d,e,f,g,h,i,j,q,l in zip(sfr_disk[ind]/h0/1e9, sfr_burst[ind]/h0/1e9, mdisk[ind]/h0, mbulge[ind]/h0, mHI[ind]/h0*XH, mH2[ind]/h0*XH, mHI_bulge[ind]/h0*XH, mH2_bulge[ind]/h0*XH, mbulge_mergers[ind]/h0, mbulge_diskins[ind]/h0, mbulge_mergers_assembly[ind]/h0, mbulge_diskins_assembly[ind]/h0):
+        #    print (a,b,c,d,e,f,g,h,i,j,q,l)
+        ind = np.where((mdisk+mbulge)/h0 > 1e8)
+        print('#sfr mstellar zstar r50 type_galaxy')
+        for a,b,c,d,e in zip((sfr_disk[ind]+sfr_burst[ind])/h0/1e9, (mdisk[ind]+mbulge[ind])/h0, zstar[ind], rcomb[ind], typeg[ind]):
+            print (a,b,c,d,e)
 
     ind = np.where((mdisk+mbulge) > 0.0)
     mass[ind] = np.log10(mdisk[ind] + mbulge[ind]) - np.log10(float(h0))
     logger.debug('number of galaxies with mstars>0 and max mass: %d, %d', len(mass[ind]), max(mass[ind]))
-
+    
     H, _ = np.histogram(mass,bins=np.append(mbins,mupp))
     hist_smf[index,:] = hist_smf[index,:] + H
     ran_err = np.random.normal(0.0, 0.25, len(mass))
@@ -1445,7 +1463,7 @@ def main(modeldir, outdir, redshift_table, subvols, obsdir):
                            'mgas_metals_disk', 'mgas_metals_bulge',
                            'mstars_metals_disk', 'mstars_metals_bulge', 'type', 
 			   'mvir_hosthalo', 'rstar_bulge', 'mstars_burst_mergers', 
-                           'mstars_burst_diskinstabilities')}
+                           'mstars_burst_diskinstabilities', 'mstars_bulge_mergers_assembly', 'mstars_bulge_diskins_assembly')}
 
     for index, snapshot in enumerate(redshift_table[zlist]):
         hdf5_data = common.read_data(modeldir, snapshot, fields, subvols)

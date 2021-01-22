@@ -144,6 +144,7 @@ private:
 
 	void create_per_thread_objects();
 	std::vector<MergerTreePtr> import_trees();
+	void log_snapshot_statistics(int snapshot, const std::vector<HaloPtr> &halos, const Timer &t) const;
 	void evolve_merger_trees(const std::vector<std::vector<MergerTreePtr>> &all_trees, int snapshot);
 	evolution_times evolve_merger_tree(const MergerTreePtr &tree, unsigned int thread_idx, int snapshot, double z, double delta_t);
 	molgas_per_galaxy get_molecular_gas(const std::vector<HaloPtr> &halos, double z, bool calc_j);
@@ -374,9 +375,48 @@ evolution_times SharkRunner::impl::evolve_merger_tree(const MergerTreePtr &tree,
 	return times;
 }
 
+void SharkRunner::impl::log_snapshot_statistics(int snapshot, const std::vector<HaloPtr> &halos, const Timer &t) const
+{
+	auto duration_millis = t.get() / 1000 / 1000;
+
+	// Some high-level ODE and integration iteration count statistics
+	auto starform_integration_intervals = std::accumulate(thread_objects.begin(), thread_objects.end(), std::size_t(0), [](std::size_t x, const PerThreadObjects &o) {
+		return x + o.physical_model->get_star_formation_integration_intervals();
+	});
+	auto galaxy_ode_evaluations = std::accumulate(thread_objects.begin(), thread_objects.end(), std::size_t(0), [](std::size_t x, const PerThreadObjects &o) {
+		return x + o.physical_model->get_galaxy_ode_evaluations();
+	});
+	auto starburst_ode_evaluations = std::accumulate(thread_objects.begin(), thread_objects.end(), std::size_t(0), [](std::size_t x, const PerThreadObjects &o) {
+		return x + o.physical_model->get_galaxy_starburst_ode_evaluations();
+	});
+	auto n_halos = halos.size();
+	auto n_subhalos = std::accumulate(halos.begin(), halos.end(), std::size_t(0), [](std::size_t n_subhalos, const HaloPtr &halo) {
+		return n_subhalos + halo->subhalo_count();
+	});
+	auto n_galaxies = std::accumulate(halos.begin(), halos.end(), std::size_t(0), [](std::size_t n_galaxies, const HaloPtr &halo) {
+		return n_galaxies + halo->galaxy_count();
+	});
+
+	SnapshotStatistics stats {snapshot, threads, starform_integration_intervals, galaxy_ode_evaluations, starburst_ode_evaluations,
+							  n_halos, n_subhalos, n_galaxies, duration_millis};
+	LOG(info) << "Statistics for snapshot " << snapshot << "\n" << stats;
+}
+
+std::vector<HaloPtr> all_halos_at_snapshot(const std::vector<std::vector<MergerTreePtr>> &all_trees, int snapshot)
+{
+	std::vector<HaloPtr> halos_at_snapshot;
+	for (auto &merger_trees: all_trees) {
+		for (auto &tree: merger_trees) {
+			const auto &halos = tree->halos_at(snapshot);
+			halos_at_snapshot.insert(halos_at_snapshot.end(), halos.begin(), halos.end());
+		}
+	}
+	return halos_at_snapshot;
+}
+
 void SharkRunner::impl::evolve_merger_trees(const std::vector<std::vector<MergerTreePtr>> &all_trees, int snapshot)
 {
-	Timer t;
+	Timer snapshot_evolution_t;
 
 	for(auto &o: thread_objects) {
 		o.physical_model->reset_ode_evaluations();
@@ -408,16 +448,7 @@ void SharkRunner::impl::evolve_merger_trees(const std::vector<std::vector<Merger
 	add_to_total(times);
 
 	// Collect this snapshot's halos across all merger trees
-	// We keep them sorted so when output files are created the order in which
-	// information appears is the same regardless of how many threads were used
-	std::vector<HaloPtr> all_halos_this_snapshot;
-	for (auto &merger_trees: all_trees) {
-		for (auto &tree: merger_trees) {
-			const auto &halos = tree->halos_at(snapshot);
-			all_halos_this_snapshot.insert(all_halos_this_snapshot.end(), halos.begin(), halos.end());
-		}
-	}
-	sort_by_id(all_halos_this_snapshot);
+	auto all_halos_this_snapshot = all_halos_at_snapshot(all_trees, snapshot);
 
 	bool write_galaxies = exec_params.output_snapshot(snapshot + 1);
 
@@ -430,8 +461,17 @@ void SharkRunner::impl::evolve_merger_trees(const std::vector<std::vector<Merger
 	track_total_baryons(*cosmology, exec_params, simulation_params, all_halos_this_snapshot, all_baryons, snapshot, molgas_per_gal, delta_t);
 	LOG(info) << "Total baryon amounts tracked in " << tracking_t;
 
-	/*Here you could include the physics that allow halos to speak to each other. This could be useful e.g. during reionisation.*/
-	//do_stuff_at_halo_level(all_halos_this_snapshot);
+	log_snapshot_statistics(snapshot, all_halos_this_snapshot, snapshot_evolution_t);
+
+	/*transfer galaxies from this halo->subhalos to the next snapshot's halo->subhalos*/
+	LOG(debug) << "Transferring all galaxies for snapshot " << snapshot << " into next snapshot";
+	transfer_galaxies_to_next_snapshot(all_halos_this_snapshot, snapshot, all_baryons);
+
+	// Collect next snapshot's halos across all merger trees
+	// We keep them sorted so when output files are created the order in which
+	// information appears is the same regardless of how many threads were used
+	auto all_halos_next_snapshot = all_halos_at_snapshot(all_trees, snapshot + 1);
+	sort_by_id(all_halos_next_snapshot);
 
 	if (write_galaxies)
 	{
@@ -440,37 +480,12 @@ void SharkRunner::impl::evolve_merger_trees(const std::vector<std::vector<Merger
 		// snapshot "i+1", and therefore at this point in time (after the actual
 		// evolution) we consider our galaxies to be at snapshot "i+1"
 		LOG(info) << "Write output files for evolution from snapshot " << snapshot << " to " << snapshot + 1;
-		writer->write(snapshot + 1, all_halos_this_snapshot, all_baryons, molgas_per_gal);
+		writer->write(snapshot + 1, all_halos_next_snapshot, all_baryons, molgas_per_gal);
 	}
 
-	auto duration_millis = t.get() / 1000 / 1000;
-
-	// Some high-level ODE and integration iteration count statistics
-	auto starform_integration_intervals = std::accumulate(thread_objects.begin(), thread_objects.end(), std::size_t(0), [](std::size_t x, const PerThreadObjects &o) {
-		return x + o.physical_model->get_star_formation_integration_intervals();
-	});
-	auto galaxy_ode_evaluations = std::accumulate(thread_objects.begin(), thread_objects.end(), std::size_t(0), [](std::size_t x, const PerThreadObjects &o) {
-		return x + o.physical_model->get_galaxy_ode_evaluations();
-	});
-	auto starburst_ode_evaluations = std::accumulate(thread_objects.begin(), thread_objects.end(), std::size_t(0), [](std::size_t x, const PerThreadObjects &o) {
-		return x + o.physical_model->get_galaxy_starburst_ode_evaluations();
-	});
-	auto n_halos = all_halos_this_snapshot.size();
-	auto n_subhalos = std::accumulate(all_halos_this_snapshot.begin(), all_halos_this_snapshot.end(), std::size_t(0), [](std::size_t n_subhalos, const HaloPtr &halo) {
-		return n_subhalos + halo->subhalo_count();
-	});
-	auto n_galaxies = std::accumulate(all_halos_this_snapshot.begin(), all_halos_this_snapshot.end(), std::size_t(0), [](std::size_t n_galaxies, const HaloPtr &halo) {
-		return n_galaxies + halo->galaxy_count();
-	});
-
-	SnapshotStatistics stats {snapshot, threads, starform_integration_intervals, galaxy_ode_evaluations, starburst_ode_evaluations,
-							  n_halos, n_subhalos, n_galaxies, duration_millis};
-	LOG(info) << "Statistics for snapshot " << snapshot << "\n" << stats;
-
-
-	/*transfer galaxies from this halo->subhalos to the next snapshot's halo->subhalos*/
-	LOG(debug) << "Transferring all galaxies for snapshot " << snapshot << " into next snapshot";
-	transfer_galaxies_to_next_snapshot(all_halos_this_snapshot, snapshot, all_baryons);
+	/*reset instantaneous galaxy properties to 0 to initiate calculation at subsequent snapshot*/
+	LOG(debug) << "Reseting all instantaneous galaxy properties to 0 at snapshot " << snapshot;
+	reset_instantaneous_galaxy_properties(all_halos_next_snapshot, snapshot);
 
 }
 

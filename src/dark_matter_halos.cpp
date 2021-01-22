@@ -28,6 +28,8 @@
 #include <stdexcept>
 #include <tuple>
 
+#include <gsl/gsl_sf_lambert.h>
+
 #include "cosmology.h"
 #include "dark_matter_halos.h"
 #include "galaxy.h"
@@ -129,23 +131,28 @@ double DarkMatterHalos::halo_virial_velocity (double mvir, double redshift){
 
 double DarkMatterHalos::halo_dynamical_time (HaloPtr &halo, double z)
 {
-	return subhalo_dynamical_time(*halo->central_subhalo, z);
+        double v = halo_virial_velocity(halo->Mvir, z);
+        double r = constants::G * halo->Mvir / std::pow(v,2);
+        double t = constants::MPCKM2GYR * cosmology->comoving_to_physical_size(r, z) / v;
+        return t;
 }
 
 double DarkMatterHalos::subhalo_dynamical_time (Subhalo &subhalo, double z){
 
-	double r = halo_virial_radius(subhalo);
+	double r = halo_virial_radius(subhalo.host_halo, z);
 
 	return constants::MPCKM2GYR * cosmology->comoving_to_physical_size(r, z) / subhalo.Vvir;
 }
 
-double DarkMatterHalos::halo_virial_radius(Subhalo &subhalo){
+double DarkMatterHalos::halo_virial_radius(HaloPtr &halo, double z){
 
 	/**
 	 * Function to calculate the halo virial radius. Returns virial radius in physical Mpc/h.
 	 */
-	return constants::G * subhalo.Mvir / std::pow(subhalo.Vvir,2);
+        double v = halo_virial_velocity(halo->Mvir, z);
+	return constants::G * halo->Mvir / std::pow(v,2);
 }
+
 
 float DarkMatterHalos::halo_lambda (const Subhalo &subhalo, float m, double z, double npart){
 
@@ -187,7 +194,7 @@ double DarkMatterHalos::disk_size_theory (Subhalo &subhalo, double z){
 
 	if(params.sizemodel == DarkMatterHaloParameters::MO98){
 		//Calculation comes from assuming rdisk = 2/sqrt(2) *lambda *Rvir;
-		double Rvir = halo_virial_radius(subhalo);
+		double Rvir = halo_virial_radius(subhalo.host_halo, z);
 
 		double lambda = subhalo.lambda;
 
@@ -275,9 +282,9 @@ void DarkMatterHalos::cooling_gas_sAM(Subhalo &subhalo, double z){
 
 }
 
-void DarkMatterHalos::disk_sAM(Subhalo &subhalo, Galaxy &galaxy){
+void DarkMatterHalos::disk_sAM(Subhalo &subhalo, Galaxy &galaxy, double z){
 
-	double rvir = halo_virial_radius(subhalo);
+	double rvir = halo_virial_radius(subhalo.host_halo, z);
 
 	//disk properties. Use composite size of disk.
 	double rdisk = galaxy.disk_size();
@@ -314,9 +321,9 @@ void DarkMatterHalos::disk_sAM(Subhalo &subhalo, Galaxy &galaxy){
 
 }
 
-void DarkMatterHalos::bulge_sAM(Subhalo &subhalo, Galaxy &galaxy){
+void DarkMatterHalos::bulge_sAM(Subhalo &subhalo, Galaxy &galaxy, double z){
 
-	double rvir = halo_virial_radius(subhalo);
+	double rvir = halo_virial_radius(subhalo.host_halo, z);
 
 	//disk properties. Use composite size of disk.
 	double rdisk = galaxy.disk_size();
@@ -356,7 +363,7 @@ void DarkMatterHalos::transfer_bulge_am(SubhaloPtr &subhalo, Galaxy &galaxy, dou
 		galaxy.disk_gas.rscale = disk_size_theory(*subhalo, z);
 
 		// define disk angular momentum.
-		disk_sAM(*subhalo, galaxy);
+		disk_sAM(*subhalo, galaxy, z);
 	}
 	else if (params.sizemodel == DarkMatterHaloParameters::COLE00){
 		//TODO
@@ -444,11 +451,11 @@ xyz<float> DarkMatterHalos::random_point_in_sphere(float r, std::default_random_
 	};
 }
 
-void DarkMatterHalos::generate_random_orbits(xyz<float> &pos, xyz<float> &v, xyz<float> &L, double total_am, const HaloPtr &halo)
+void DarkMatterHalos::generate_random_orbits(xyz<float> &pos, xyz<float> &v, xyz<float> &L, double total_am, const HaloPtr &halo, const Galaxy &galaxy)
 {
 
 	// Prime the generator with a known seed to allow for reproducible runs
-	std::default_random_engine generator(exec_params.get_seed(halo));
+	std::default_random_engine generator(exec_params.get_seed(galaxy));
 
 	double c = halo->concentration;
 

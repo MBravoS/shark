@@ -45,10 +45,15 @@ void adjust_main_galaxy(const SubhaloPtr &parent, const SubhaloPtr &descendant)
 	auto main_galaxy = (parent_is_central ? parent->central_galaxy() : parent->type1_galaxy());
 
 	// Define the stellar content of the central at the moment of infall. So this applied only to subhalos that are currently centrail but will become
-	// satellite in the next snapshot.
+	// satellite in the next snapshot. In this case also transfer stellar halo of the subhalo to the main progenitor subhalo.
 	if(parent_is_central && !desc_is_central){
 		descendant->star_central_infall.mass = main_galaxy->stellar_mass();
 		descendant->star_central_infall.mass_metals = main_galaxy->stellar_mass_metals();
+		//if subhalo will become a satellite subhalo then transfer the stellar_halo.
+		descendant->host_halo->central_subhalo->stellar_halo += parent->stellar_halo;
+		descendant->host_halo->central_subhalo->mean_galaxy_making_stellar_halo += parent->mean_galaxy_making_stellar_halo;
+		parent->stellar_halo.restore_baryon();
+		parent->mean_galaxy_making_stellar_halo = 0;
 	}
 
 	if (!main_galaxy) {
@@ -90,17 +95,6 @@ void transfer_galaxies_to_next_snapshot(const std::vector<HaloPtr> &halos, int s
 
 			// Make sure all SFRs and BH accretion rates (in mass and metals) are set to 0 for the next snapshot
 			for (auto &galaxy: subhalo->galaxies) {
-				galaxy.sfr_bulge_mergers  = 0;
-				galaxy.sfr_z_bulge_mergers= 0;
-				galaxy.sfr_bulge_diskins  = 0;
-				galaxy.sfr_z_bulge_diskins= 0;
-				galaxy.sfr_z_disk         = 0;
-				galaxy.sfr_disk           = 0;
-				galaxy.smbh.macc_sb       = 0;
-				galaxy.smbh.macc_hh       = 0;
-
-				//restart counter of mergers and disk instabilities.
-				galaxy.interaction.restore_interaction_item();
 				//restart descendant_id
 				galaxy.descendant_id = -1;
 			}
@@ -141,8 +135,9 @@ void transfer_galaxies_to_next_snapshot(const std::vector<HaloPtr> &halos, int s
 			descendant_subhalo->hot_halo_gas += subhalo->hot_halo_gas;
 			descendant_subhalo->ejected_galaxy_gas += subhalo->ejected_galaxy_gas;
 			descendant_subhalo->lost_galaxy_gas += subhalo->lost_galaxy_gas;
-			descendant_subhalo->stellar_halo += subhalo->stellar_halo;
 			descendant_subhalo->star_central_infall = subhalo->star_central_infall;
+			descendant_subhalo->stellar_halo += subhalo->stellar_halo;
+			descendant_subhalo->mean_galaxy_making_stellar_halo += subhalo->mean_galaxy_making_stellar_halo;
 
 			if (subhalo->main_progenitor) {
 				descendant_subhalo->cooling_subhalo_tracking = subhalo->cooling_subhalo_tracking;
@@ -168,6 +163,32 @@ void transfer_galaxies_to_next_snapshot(const std::vector<HaloPtr> &halos, int s
 
 }
 
+void reset_instantaneous_galaxy_properties(const std::vector<HaloPtr> &halos, int snapshot)
+{
+	// This function resets to 0 all galaxy properties that are instantaneous to the snapshot. This is done after the writing.
+
+	for(auto &halo: halos){
+		for(auto &subhalo: halo->all_subhalos()) {
+
+			// Make sure all SFRs and BH accretion rates (in mass and metals) are set to 0 for the next snapshot
+			for (auto &galaxy: subhalo->galaxies) {
+				galaxy.sfr_bulge_mergers  = 0;
+				galaxy.sfr_z_bulge_mergers= 0;
+				galaxy.sfr_bulge_diskins  = 0;
+				galaxy.sfr_z_bulge_diskins= 0;
+				galaxy.sfr_z_disk         = 0;
+				galaxy.sfr_disk           = 0;
+				galaxy.smbh.macc_sb       = 0;
+				galaxy.smbh.macc_hh       = 0;
+
+				//restart counter of mergers and disk instabilities.
+				galaxy.interaction.restore_interaction_item();
+			}
+		}
+	}
+
+}
+
 void track_total_baryons(Cosmology &cosmology, ExecutionParameters execparams, SimulationParameters simulation_params, const std::vector<HaloPtr> &halos,
 		TotalBaryon &AllBaryons, int snapshot, const molgas_per_galaxy &molgas, double deltat){
 
@@ -185,7 +206,7 @@ void track_total_baryons(Cosmology &cosmology, ExecutionParameters execparams, S
 	BaryonBase mH2_total;
 	BaryonBase mDM_total;
 
-        float SMBH_max = 0;
+	float SMBH_max = 0;
 
 	double SFR_total_disk = 0;
 	double SFR_total_burst = 0;
