@@ -1,6 +1,28 @@
 Changelog
 =========
 
+.. rubric:: 2.0.0
+
+* Many changes to the physical models SHARK, which are collectively described in
+  Lagos et al. (2023, submitted to MNRAS). There are also many changes in the
+  way we create extinction parameters, which are described in the paper Lagos et
+  al. (2019, MNRAS, 489.4196).
+* Many improvements to the our PSO support.
+  This includes better logging of detailed constraint evaluation information,
+  improved stability in a few corner cases,
+  and offline evaluation of previous shark runs.
+* Improved the memory footprint of |s| executions.
+  We have made a major overhaul of the code
+  to be more memory efficient,
+  thus allowing for better resource usage,
+  specially in HPC systems
+  and PSO executions.
+  Several experiments with our mini-SURFS and medi-SURFS datasets
+  show a decrease of about 20% on peak memory usage.
+* Made |s| fully reproducible in multi-threaded mode,
+  even when running a different number of threads
+  than a previous execution.
+
 .. rubric:: 1.2.1
 
 * Fixed compilation problem related to OpenMP support.
