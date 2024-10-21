@@ -164,7 +164,7 @@ class Constraint(object):
         mstar_dm_plot, mcold_dm_plot, mhot_dm_plot, meje_dm_plot, mbar_dm_plot,
         sfr, sfrd, sfrb, mstarden, mstarbden_mergers, mstarbden_diskins, sfre, sfreH2, mhrat,
         mHI_plot, mH2_plot, mH2den, mdustden, omegaHI, mdustden_mol, mcoldden, mhotden,
-        mejeden, history_interactions, mDMden, mlost_dm_plot, mcreated_dm_plot) = global_quantities.prepare_data(hdf5_data_sfr, redshifts, False)
+        mejeden, history_interactions, mDMden, mlost_dm_plot, mcreated_dm_plot) = global_quantities.prepare_data(hdf5_data_sfr, redshifts)
 
 	#### Size-mass relation ####
         mlow3 = 6.5
